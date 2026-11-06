@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NetMod .nm Unlocker</title>
+<style>
+  :root { --bg:#0f1117; --card:#171a23; --line:#262b38; --txt:#e6e9f0; --dim:#8b93a7; --acc:#4f8cff; --ok:#3ecf8e; --err:#ff5d5d; --mono:ui-monospace,Consolas,Menlo,monospace; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--txt); font:15px/1.5 -apple-system,"Segoe UI",Roboto,sans-serif; min-height:100vh; }
+  .wrap { max-width:860px; margin:0 auto; padding:28px 18px 80px; }
+  h1 { font-size:22px; margin:0 0 4px; letter-spacing:.3px; }
+  h1 .ac { color:var(--acc); }
+  .sub { color:var(--dim); font-size:13px; margin:0 0 22px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+  .drop { border:2px dashed var(--line); border-radius:14px; padding:42px 18px; text-align:center; cursor:pointer; transition:.15s; }
+  .drop:hover, .drop.drag { border-color:var(--acc); background:rgba(79,140,255,.06); }
+  .drop .big { font-size:34px; }
+  .drop p { margin:8px 0 0; color:var(--dim); font-size:13px; }
+  .drop input { display:none; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:10px; margin:12px 0; }
+  .stat { background:#12151d; border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .stat .k { color:var(--dim); font-size:11px; text-transform:uppercase; letter-spacing:.6px; }
+  .stat .v { font-size:17px; font-weight:600; margin-top:2px; }
+  .stat .v.ok { color:var(--ok); } .stat .v.bad { color:var(--err); }
+  .opt { display:flex; align-items:center; gap:9px; margin:10px 0 14px; color:var(--txt); font-size:14px; cursor:pointer; }
+  .opt input { width:17px; height:17px; accent-color:var(--acc); }
+  button { background:var(--acc); color:#fff; border:0; border-radius:10px; padding:11px 20px; font-size:15px; font-weight:600; cursor:pointer; transition:.15s; }
+  button:hover { filter:brightness(1.1); }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button.ghost { background:transparent; border:1px solid var(--line); color:var(--txt); }
+  details.preview { margin-top:14px; border:1px solid var(--line); border-radius:10px; background:#12151d; }
+  details.preview summary { cursor:pointer; padding:10px 14px; font-weight:600; font-size:13px; color:var(--dim); }
+  pre.json { margin:0; padding:12px 14px; font:12px/1.55 var(--mono); white-space:pre-wrap; word-break:break-all; color:#c8d2e8; max-height:340px; overflow:auto; }
+  .errbox { background:rgba(255,93,93,.09); border:1px solid rgba(255,93,93,.35); color:var(--err); border-radius:10px; padding:12px 14px; font-size:14px; margin-bottom:14px; }
+  .note { color:var(--dim); font-size:12px; margin-top:18px; text-align:center; }
+  .fname { font-size:13px; color:var(--dim); word-break:break-all; }
+  .badge { display:inline-block; background:rgba(79,140,255,.14); color:var(--acc); border-radius:6px; padding:1px 8px; font-size:12px; margin-left:8px; }
+  textarea { width:100%; background:#12151d; color:var(--txt); border:1px solid var(--line); border-radius:10px; padding:12px; font:13px/1.5 var(--mono); resize:vertical; box-sizing:border-box; }
+  textarea:focus { outline:none; border-color:var(--acc); }
+  .lnk { border:1px solid var(--line); background:#12151d; border-radius:10px; padding:10px 12px; margin-top:10px; }
+  .lnk .head { display:flex; align-items:center; gap:8px; margin-bottom:6px; font-size:12px; }
+  .lnk .lock { color:var(--err); font-weight:700; }
+  .lnk .free { color:var(--ok); font-weight:700; }
+  .lnk .uri { font:12px/1.5 var(--mono); color:#c8d2e8; word-break:break-all; white-space:pre-wrap; }
+  .lnk .err { color:var(--err); font-size:12px; }
+  .copy { background:transparent; border:1px solid var(--line); color:var(--txt); border-radius:7px; padding:3px 10px; font-size:12px; cursor:pointer; margin-left:auto; }
+  .copy:hover { border-color:var(--acc); color:var(--acc); }
+  .copied { color:var(--ok); font-size:12px; margin-left:8px; }
+  .hint { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NetMod <span class="ac">.nm Unlocker</span></h1>
+  <p class="sub">Unlock locked NetMod config files (v4.2.0 format). 100% local &mdash; nothing leaves your device.</p>
+
+  <div class="card">
+    <div class="drop" id="drop">
+      <div class="big">&#128190;</div>
+      <p>Drop a <b>.nm</b> file here, or click to browse</p>
+      <input type="file" id="file" accept=".nm">
+    </div>
+    <div id="fname" class="fname" style="margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:600;margin-bottom:8px">Locked links</div>
+    <div style="color:var(--dim);font-size:12px;margin-bottom:10px">Paste locked share links (<code>nm-ss://</code>, <code>nm-vless://</code>, &hellip;) or raw <code>.nm</code> text &mdash; one per line, or all at once.</div>
+    <textarea id="links" rows="5" spellcheck="false" placeholder="nm-vless://&lt;encrypted&gt;&#10;nm-ss://&lt;encrypted&gt;&#10;... or a full .nm base64 blob"></textarea>
+    <div class="row" style="margin-top:10px">
+      <button id="unlockLinks">Unlock links</button>
+      <button id="copyAll" class="ghost" style="display:none">Copy all</button>
+    </div>
+    <div id="linkResults"></div>
+  </div>
+
+  <div id="err"></div>
+
+  <div id="result" style="display:none">
+    <div class="card">
+      <div class="stats" id="stats"></div>
+      <label class="opt"><input type="checkbox" id="optHw" checked> Remove device-ID lock (<code>HwIds</code>) so it imports on any device</label>
+      <div class="row">
+        <button id="dl">Download unlocked .nm</button>
+        <button id="dlJson" class="ghost">Download decrypted JSON</button>
+        <button id="dlLocked" class="ghost">Download original-locked .nm</button>
+      </div>
+    </div>
+    <details class="preview" open>
+      <summary>Decrypted config preview</summary>
+      <pre class="json" id="json"></pre>
+    </details>
+  </div>
+
+  <p class="note">Reverse-engineered from NetMod 4.2.0 (mod). Crypto: AES-128-ECB &middot; PKCS#7 &middot; base64 container. Works offline.</p>
+</div>
+
+<script src="aes.js"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const drop = $('drop'), fileInput = $('file');
+  let sourceObj = null, unlockedObj = null, sourceName = '';
+
+  function showErr(msg) { $('err').innerHTML = '<div class="errbox">' + msg + '</div>'; }
+
+  function countLocks(o, acc) {
+    if (Array.isArray(o)) { o.forEach((x) => countLocks(x, acc)); return; }
+    if (o && typeof o === 'object') {
+      for (const k of Object.keys(o)) {
+        if (k === 'Locked' && o[k] === true) acc.push(k);
+        countLocks(o[k], acc);
+      }
+    }
+  }
+
+  function schemeStats(o, out) {
+    if (Array.isArray(o)) { o.forEach((x) => schemeStats(x, out)); return; }
+    if (o && typeof o === 'object') {
+      for (const k of Object.keys(o)) {
+        if (typeof o[k] === 'string') {
+          const m = o[k].match(/^([a-z0-9-]+):\/\//);
+          if (m) out[m[1]] = (out[m[1]] || 0) + 1;
+          if (o[k].startsWith('nm-')) out.nmCount = (out.nmCount || 0) + 1;
+        }
+        schemeStats(o[k], out);
+      }
+    }
+  }
+
+  function handleFile(file) {
+    sourceName = file.name;
+    $('fname').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = () => processNmText(String(reader.result));
+    reader.onerror = () => showErr('Could not read the file.');
+    reader.readAsText(file);
+  }
+
+  function processNmText(text) {
+    try {
+      const data = Netsyn.fromBase64(text);
+      const res = Netsyn.decryptContainer(data);
+      sourceObj = res.obj;
+      unlockedObj = Netsyn.unlockJson(JSON.parse(JSON.stringify(sourceObj)));
+      $('err').innerHTML = '';
+      render();
+    } catch (e) {
+      sourceObj = null; unlockedObj = null;
+      $('result').style.display = 'none';
+      showErr('Failed to decrypt: ' + e.message);
+    }
+  }
+
+  function render() {
+    const locks = [];
+    countLocks(sourceObj, locks);
+    const schemes = {};
+    schemeStats(sourceObj, schemes);
+    const nm = schemes.nmCount || 0;
+    delete schemes.nmCount;
+    const schemeList = Object.keys(schemes).slice(0, 6).map((s) => s + '://').join(', ');
+    const isCommon = !!sourceObj.Common;
+    const entries = [];
+    if (sourceObj.Proxy) entries.push('Proxy ' + sourceObj.Proxy.length);
+    if (sourceObj.SSH) entries.push('SSH ' + sourceObj.SSH.length);
+    if (sourceObj.Common) entries.push('Configs ' + sourceObj.Common.length);
+
+    const stats = [
+      ['Type', isCommon ? 'Common (legacy)' : 'Standard', ''],
+      ['Locked flags', locks.length, locks.length ? 'bad' : 'ok'],
+      ['Profiles', entries.join(' &middot; ') || '&mdash;', ''],
+      ['Encrypted fields', nm, nm ? 'bad' : 'ok'],
+      ['Expire', sourceObj.Expire || '&mdash;', ''],
+      ['HwIds', sourceObj.HwIds ? 'present' : 'none', sourceObj.HwIds ? 'bad' : 'ok'],
+    ];
+    $('stats').innerHTML = stats.map(([k, v, cls]) =>
+      '<div class="stat"><div class="k">' + k + '</div><div class="v ' + cls + '">' + v + '</div></div>'
+    ).join('');
+    $('json').textContent = JSON.stringify(unlockedObj, null, 2);
+    if (schemeList) $('json').textContent = 'schemes: ' + schemeList + '\n\n' + $('json').textContent;
+    $('result').style.display = '';
+  }
+
+  function download(name, text, mime) {
+    const blob = new Blob([text], { type: mime || 'application/octet-stream' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  $('dl').onclick = () => {
+    const out = Netsyn.unlockJson(JSON.parse(JSON.stringify(sourceObj)));
+    if (!$('optHw').checked && sourceObj.HwIds) out.HwIds = sourceObj.HwIds;
+    const text = Netsyn.encryptContainer(JSON.stringify(out));
+    download(sourceName.replace(/\.nm$/i, '') + '_unlocked.nm', text, 'text/plain');
+  };
+  $('dlJson').onclick = () => download(sourceName.replace(/\.nm$/i, '') + '.json', JSON.stringify(unlockedObj, null, 2), 'application/json');
+  $('dlLocked').onclick = () => download(sourceName.replace(/\.nm$/i, '') + '_relocked.nm', Netsyn.encryptContainer(JSON.stringify(sourceObj)), 'text/plain');
+
+  drop.addEventListener('click', () => fileInput.click());
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('drag'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+  drop.addEventListener('drop', (e) => {
+    e.preventDefault();
+    drop.classList.remove('drag');
+    if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', () => { if (fileInput.files.length) handleFile(fileInput.files[0]); });
+
+  function copyText(text, btn) {
+    const done = () => {
+      const s = document.createElement('span');
+      s.className = 'copied';
+      s.textContent = 'copied';
+      btn.parentNode.insertBefore(s, btn.nextSibling);
+      setTimeout(() => s.remove(), 1200);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, () => fallback());
+    } else fallback();
+    function fallback() {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      ta.remove();
+      done();
+    }
+  }
+
+  function renderLinks(links) {
+    const box = $('linkResults');
+    box.innerHTML = '';
+    if (!links.length) { box.innerHTML = '<div class="hint">Nothing to unlock.</div>'; return; }
+    let any = false;
+    links.forEach((r, i) => {
+      const div = document.createElement('div');
+      div.className = 'lnk';
+      const head = document.createElement('div');
+      head.className = 'head';
+      const badge = document.createElement('span');
+      if (r.error) { badge.className = 'lock'; badge.textContent = 'FAILED'; }
+      else if (r.locked) { badge.className = 'lock'; badge.textContent = 'LOCKED'; any = true; }
+      else { badge.className = 'free'; badge.textContent = 'UNLOCKED'; }
+      head.appendChild(badge);
+      if (r.scheme) {
+        const sc = document.createElement('span');
+        sc.textContent = r.scheme;
+        head.appendChild(sc);
+      }
+      const cp = document.createElement('button');
+      cp.className = 'copy';
+      cp.textContent = 'Copy';
+      cp.onclick = () => copyText(r.plain, cp);
+      head.appendChild(cp);
+      div.appendChild(head);
+      const uri = document.createElement('div');
+      uri.className = r.error ? 'err' : 'uri';
+      uri.textContent = r.plain;
+      div.appendChild(uri);
+      box.appendChild(div);
+    });
+    $('copyAll').style.display = any || links.some((l) => !l.error) ? '' : 'none';
+    $('copyAll').onclick = () => {
+      const all = links.filter((l) => !l.error).map((l) => l.plain).join('\n');
+      copyText(all, $('copyAll'));
+    };
+  }
+
+  $('unlockLinks').onclick = () => {
+    const text = $('links').value;
+    if (!text.trim()) return;
+    const res = Netsyn.unlockText(text);
+    if (res.nm) {
+      $('fname').textContent = '(pasted .nm content)';
+      processNmText(text);
+      renderLinks([]);
+      $('linkResults').innerHTML = '<div class="hint">Pasted text was a .nm config &mdash; handled above as a file.</div>';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      renderLinks(res.links);
+    }
+  };
+})();
+</script>
+</body>
+</html>
